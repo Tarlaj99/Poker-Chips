@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+     <style>
+        body {
+            color: white;
+            font-family: Arial, sans-serif;
+            display: flex;
+            max-width: 600px;
+            flex-direction: column;
+            align-items: center;
+            margin: 40px auto;
+            padding: 20px;
+            background-color: black;
+        }
+
+        h1{
+            text-shadow: 0px 0px 10px rgb(177, 177, 177);
+            display: block;
+            color: white;
+            margin: 0 0 20px 0;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        input, button {
+            padding: 10px;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+        input{
+            border: none;
+            color: rgb(255, 0, 204);
+            text-shadow: 0px -1px 5px rgb(238, 0, 255);
+            font-size: 25px;
+            background-color: black;
+        }
+        input[type='text']{
+            height: 30px;
+        }
+
+        input[type='button']{
+            height: 80px;
+        }
+        input:focus{
+            outline: none;
+        }
+
+        .box {
+            margin: 0;
+            border: 1px solid #ccc;
+            padding: 20px;
+            border-radius: 10px;
+        }
+        /* .card, #box{
+            filter: blur(0.2em);
+            transition: filter 0.5s;
+        } */
+        .card{
+            margin: 2%;
+            padding: 2em;
+            width: 50%;
+            height: 100%;
+            background-color: #1c1f2b;
+            text-align: center;
+            border-radius: 10px;
+            position: relative;
+        }
+
+        @property --angle{
+            syntax: "<angle>";
+            initial-value: 0deg;
+            inherits: false;
+        }
+        .card::after, .card::before{
+            z-index: -999;
+            content: '';
+            position: absolute;
+            height: 100%;
+            width: 100%;
+            /* background-image: conic-gradient(from var(--angle),yellow, red, rgb(217, 10, 189), rgb(124, 0, 219), blue, cyan, rgb(10, 209, 10), yellow); */
+            /* background-image: conic-gradient(from var(--angle), transparent 60%, rgb(255, 0, 234)); */
+            /* background-image: conic-gradient(from var(--angle), rgb(244, 24, 123),rgb(224, 35, 252),rgb(107, 17, 171), rgb(244, 24, 123)); */
+            background-image: conic-gradient(from var(--angle), rgb(170, 52, 255), rgb(246, 139, 238) 20%, rgb(170, 52, 255));
+            animation: 2s spin linear infinite;
+            top: 50%; left: 50%;
+            translate: -50% -50%;
+            /* zeby nie miec tla w  boxie */
+            padding: 3px;
+            border-radius: 10px;
+        }
+        @keyframes spin{
+            from{
+                --angle: 0deg;
+            }
+            to{
+                --angle: 360deg;
+            }
+        }
+
+        .card::before{
+            filter: blur(1.5rem);
+        }
+        #money{
+            text-shadow: 0px 0px 10px rgb(255, 255, 255);
+            font-size: 35px;
+        }
+        #pot{
+            text-shadow: 0 0 15px rgb(255, 0, 0);
+            font-size: 40px;
+        }
+        #highest_bet{
+            text-shadow: 0 0 10px rgb(140, 0, 255);
+            font-size: 35px;
+        }
+        #player_bet{
+            text-shadow: 0 0 10px rgb(49, 156, 232);
+            font-size: 35px;
+        }
+        .gotowosc > button{
+            height: 100%;
+            width: 100%;
+            margin: 0;
+            border-radius: 10px;
+            transition: transform 0.2s ease;
+            color: black;
+            font-size: 40px;
+            text-shadow: 0 0 5px rgb(255, 6, 226);
+        }
+
+        button[value="fold"]{
+            background-color: rgb(200, 1, 1); 
+            color: white;
+            text-shadow: 0 0 8px black;
+            border: 2px solid rgb(145, 3, 3);
+        }
+        button{
+            color: white;
+            text-shadow: 0 0 8px black;
+            background-color: rgb(227, 174, 227); 
+            border: 2px solid rgb(213, 102, 209);
+            margin: 8px;
+            width: 65px;
+            text-align: center;
+        }
+        form > button:active{
+            transform: scale(0.95);
+        }
+        .register{
+            color: rgb(144, 14, 200);
+            margin-top: 10%;
+            text-align: left;
+        }
+        a{
+            color: rgb(144, 14, 200);
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="box">
+            <h1>Sign up</h1>
+            <form action="/login" method="post">
+                <input type="text" name="username" placeholder="Username" required>
+                <input type="text" name="password" placeholder="Password" required>
+                <input type="submit" value="Sign up">
+            </form>
+            <div class="register">
+                <p>Don't have an account yet?</p>
+                <a href="/register">register</a>
+            </div>
+        </div>
+    </div>
+    <script>
+        const form = document.querySelector('form');
+
+        form.addEventListener('submit', async (event) => {
+            
+        });
+    </script>
+</body>
+</html>

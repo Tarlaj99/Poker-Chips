@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>Pula</title>
+    <style>
+        h1{
+            text-shadow: 0px 0px 10px white;
+            display: block;
+            color: white;
+            margin: 0 0 20px 0;
+        }
+        
+        span, strong{
+            font-weight: bold;
+        }
+        body {
+            color: white;
+            font-family: Arial, sans-serif;
+            display: flex;
+            max-width: 600px;
+            flex-direction: column;
+            align-items: center;
+            margin: 40px auto;
+            padding: 20px;
+            background-color: black;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        input, button {
+            padding: 10px;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+        input{
+            border: none;
+            color: rgb(255, 0, 204);
+            text-shadow: 0 0 5px red;
+            height: 30px;
+            font-size: 25px;
+            background-color: black;
+        }
+        input:focus{
+            outline: none;
+        }
+
+        .box {
+            margin: 0;
+            border: 1px solid #ccc;
+            padding: 20px;
+            border-radius: 10px;
+        }
+        /* .card, #box{
+            filter: blur(0.2em);
+            transition: filter 0.5s;
+        } */
+        .card{
+            margin: 2%;
+            padding: 2em;
+            width: 50%;
+            height: 100%;
+            background-color: #1c1f2b;
+            text-align: center;
+            border-radius: 10px;
+            position: relative;
+        }
+
+        @property --angle{
+            syntax: "<angle>";
+            initial-value: 0deg;
+            inherits: false;
+        }
+        .card::after, .card::before{
+            z-index: -999;
+            content: '';
+            position: absolute;
+            height: 100%;
+            width: 100%;
+            /* background-image: conic-gradient(from var(--angle),yellow, red, rgb(217, 10, 189), rgb(124, 0, 219), blue, cyan, rgb(10, 209, 10), yellow); */
+            /* background-image: conic-gradient(from var(--angle), transparent 60%, rgb(255, 0, 234)); */
+            background-image: conic-gradient(from var(--angle), rgb(244, 24, 123),rgb(224, 35, 252),rgb(107, 17, 171), rgb(244, 24, 123));
+            /* background-image: conic-gradient(from var(--angle), rgb(170, 52, 255), rgb(246, 139, 238) 20%, rgb(170, 52, 255)); */
+            animation: 2s spin linear infinite;
+            top: 50%; left: 50%;
+            translate: -50% -50%;
+            /* zeby nie miec tla w  boxie */
+            padding: 3px;
+            border-radius: 10px;
+        }
+        @keyframes spin{
+            from{
+                --angle: 0deg;
+            }
+            to{
+                --angle: 360deg;
+            }
+        }
+
+        .card::before{
+            filter: blur(1.5rem);
+        }
+        #money{
+            text-shadow: 0px 0px 10px rgb(255, 255, 255);
+            font-size: 35px;
+        }
+        #pot{
+            text-shadow: 0 0 15px rgb(255, 0, 0);
+            font-size: 40px;
+        }
+        #highest_bet{
+            text-shadow: 0 0 10px rgb(140, 0, 255);
+            font-size: 35px;
+        }
+        #player_bet{
+            text-shadow: 0 0 10px rgb(49, 156, 232);
+            font-size: 35px;
+        }
+        #join_Table_container{
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 999;
+
+            width: 300px;
+            height: 100px;
+        }
+        #join_Table{
+            width: 100%;
+            height: 100%;
+
+            margin: 0;
+            transition: transform 0.2s ease;
+
+            color: black;
+            font-size: 40px;
+            text-shadow: 0 0 5px rgb(255, 6, 226);
+        }
+        #join_Table:hover{
+            transform: scale(1.07);
+        }
+
+        /* #join_Table{
+            transition: top 0.5s ease-in;
+            position: fixed;
+            z-index: 999;
+        } */
+        button[value="fold"]{
+            background-color: rgb(200, 1, 1); 
+            color: white;
+            text-shadow: 0 0 8px black;
+            border: 2px solid rgb(145, 3, 3);
+        }
+        form > button:active{
+            transform: scale(0.95);
+        }
+        #permission{
+            display: none; 
+            margin-top: 100px;
+        }
+    </style>
+</head>
+<body>
+    <div class="card" id="card">
+        <div class="box" id="box">
+            <h1 id="runda">Pre-flop</h1> 
+            <p>
+                <strong>Twoje pieniądze:</strong><br>
+                <span id="money">$1000</span>
+            </p>
+            <p>
+                <strong>Pula:</strong><br>
+                <span id="pot">$0</span>
+            </p>
+            <p>
+                <strong>Najwyższy zakład:</strong><br>
+                <span id="highest_bet">$0</span>
+            </p>
+            <p>
+                <strong>Twój zakład:</strong><br>
+                <span id="player_bet">$0</span>
+            </p>
+
+            <form action="/add" method="post">
+                <input type="number" name="bet" id="bet_input" min="1">
+                <br>
+                <div>
+                    <button type="submit" name="action" value="check">Check</button>
+                    <button type="submit" name="action" value="raise">Raise</button>
+                    <button type="submit" name="action" value="call" default>Call</button> <br>
+                    <button type="submit" name="action" value="fold" id="fold">FOLD</button>
+                </div>
+            </form>
+            <button type="button" id="winner" style="display: none; width: auto;">Kto wygrał?</button>
+        </div>
+    </div>
+    <button id="permission" type="button">NEXT ROUND</button>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        /* tylko przy wczytaniu */
+        async function wczytaj(){
+            const info_response = await fetch('/state');
+            const info = await info_response.json();
+            document.getElementById('money').textContent = "$" + info.money;
+            document.getElementById('pot').textContent = "$" + info.pot;
+            document.getElementById('highest_bet').textContent = "$" + info.highest_bet;
+            document.getElementById('player_bet').textContent = "$" + info.player_bet;
+            document.getElementById('runda').textContent = info.round || 'Pre-flop';
+        }
+        wczytaj();
+        
+        const socket = io();
+
+        socket.on("update", (dane) => { 
+            console.log("UPDATE:", dane);
+
+            document.getElementById('highest_bet').textContent = "$" + dane.highest_bet;
+            document.getElementById('pot').textContent = "$" + dane.pot;
+            document.getElementById('runda').textContent = dane.round || 'Pre-flop';
+            document.getElementById('winner').style.display = dane.showdownReady ? 'inline-block' : 'none';
+        });
+            
+
+        const form = document.querySelector('form');
+
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+
+            /*bet i action*/
+            const data = new URLSearchParams(new FormData(form, event.submitter));
+
+            const response = await fetch('/add', {
+                method: 'POST',
+                body: data,
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'}
+            });
+
+            const wynik = await response.json();
+
+            if (!response.ok) {
+                alert(wynik.error);
+                return;
+            }
+           
+            document.getElementById('money').textContent = "$" + wynik.money;
+            document.getElementById('player_bet').textContent = "$" + wynik.player_bet;
+            
+        });
+
+
+        /* te są w sumie niepotrzebne */
+        document.getElementById('winner').addEventListener('click', async () => {
+            const response = await fetch('/win', {method: 'POST'});
+
+            const wynik = await response.json();
+
+            if (!response.ok) {
+                alert(wynik.error);
+                return;
+            }
+        });
+        /* zmienia runde */
+        document.getElementById('permission').addEventListener('click', async () => {
+            const response = await fetch('/zmien_runde', {method: 'POST'});
+            const runda = await response.json();
+
+            if (!response.ok) {
+                alert(runda.error);
+                return;
+            }
+        });
+
+        document.getElementById('fold').addEventListener('click', () => {
+            document.querySelector('body').style.filter = "brightness(50%)";
+        });
+    </script> 
+</body>
+</html>
