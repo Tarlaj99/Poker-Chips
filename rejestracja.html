@@ -122,25 +122,18 @@
 <body>
     <div class="card">
         <div class="box">
-            <h1>Registration</h1> 
+            <h1>Sign up</h1> 
             <form action="/register" method="post">
-                <input type="text" name="username" placeholder="Username" required>
+                <input type="text" name="username" placeholder="Username" required autofocus>
                 <input type="text" name="password" placeholder="Password" required>
-                <input type="submit" value="Register">
+                <input type="submit" value="Enter">
             </form>
             <div class="login">
                 <p>Already have an account?</p>
-                <a href="/login">Sign up</a>
+                <a href="/login">Sign in</a>
             </div>
         </div>
     </div>
-    <script>
-        const form = document.querySelector('form');
-
-        form.addEventListener('submit', async (event) => {
-            
-        });
-    </script>
 </body>
 </html>
 

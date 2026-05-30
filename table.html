@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+     <style>
+        body {
+            color: white;
+            font-family: Arial, sans-serif;
+            display: flex;
+            max-width: 600px;
+            flex-direction: column;
+            align-items: center;
+            margin: 40px auto;
+            padding: 20px;
+            background-color: black;
+        }
+
+        h1{
+            text-shadow: 0px 0px 10px rgb(177, 177, 177);
+            display: block;
+            color: white;
+            margin: 0 0 20px 0;
+        }
+
+        input, button, label {
+            padding: 10px;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+        input{
+            border: none;
+            margin-top: 20px;
+            color: rgb(255, 0, 204);
+            text-shadow: 0px -1px 5px rgb(238, 0, 255);
+            box-shadow: 0 0 5px black;
+            font-size: 25px;
+            background-color: rgb(23, 23, 23);
+        }
+
+        label{
+            margin-bottom: 0px;
+            text-align: start;
+            border: none;
+            color: rgb(255, 0, 204);
+            text-shadow: 0px -1px 2px rgb(238, 0, 255);
+            font-size: 25px;
+        }
+        input:focus{
+            outline: none;
+        }
+
+        .box {
+            margin: 0;
+            border: 1px solid #ccc;
+            padding: 20px;
+            height: 400px;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .card{
+            margin: 2%;
+            padding: 2em;
+            width: 50%;
+            background-color: #1c1f2b;
+            text-align: center;
+            border-radius: 10px;
+            position: relative;
+        }
+
+        @property --angle{
+            syntax: "<angle>";
+            initial-value: 0deg;
+            inherits: false;
+        }
+        .card::after, .card::before{
+            z-index: -999;
+            content: '';
+            position: absolute;
+            height: 100%;
+            width: 100%;
+            /* background-image: conic-gradient(from var(--angle),yellow, red, rgb(217, 10, 189), rgb(124, 0, 219), blue, cyan, rgb(10, 209, 10), yellow); */
+            background-image: conic-gradient(from var(--angle), rgb(170, 52, 255), rgb(246, 139, 238) 20%, rgb(170, 52, 255));
+            /* background-image: conic-gradient(from var(--angle), rgb(170, 52, 255), rgb(246, 139, 238) 20%, rgb(170, 52, 255)); */
+            /* background-image: conic-gradient(from var(--angle), rgb(170, 52, 255), rgb(246, 139, 238) 20%, rgb(170, 52, 255)); */
+            animation: 3s spin linear infinite;
+            top: 50%; left: 50%;
+            translate: -50% -50%;
+            /* zeby nie miec tla w  boxie */
+            padding: 3px;
+            border-radius: 10px;
+        }
+        @keyframes spin{
+            from{
+                --angle: 0deg;
+            }
+            to{
+                --angle: 360deg;
+            }
+        }
+
+        .card::before{
+            filter: blur(1.5rem);
+        }
+
+        .login{
+            color: rgb(144, 14, 200);
+            margin-top: 10%;
+            text-align: left;
+        }
+        a{
+            color: rgb(144, 14, 200);
+        }
+        .Lobby_button{
+            background-color: #131313;
+            color: white;
+            width: 60%;
+            border: 2px solid rgb(255, 66, 242);
+            box-shadow: 0 0 5px rgb(255, 66, 242);
+            text-shadow: 0px 0px 5px rgb(248, 0, 248);
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            /* margin-top: 20px; */
+            /* margin: 20px; */
+            display: none;
+            height: 0;
+        }
+        label{
+            margin-bottom: 0px;
+            text-align: center;
+        }
+        input{
+            width: 200px;
+            box-shadow: 0 0 5px rgb(255, 66, 242);
+        }
+        .chosen_button{
+            scale: 1.15;
+        }
+        .container{
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            height: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div class="card"id="card">
+        <div class="box">
+            <h1>E-CHIPS.com</h1> 
+            <div class="container">
+                <form action="/join_lobby" method="post">
+                    <label for="id">Enter table ID</label>
+                    <input type="text" name="id" autofocus>
+                    <h3 id="error"></h3>
+                </form>
+                <div style="margin: 50px 0 50px 0; scale: 1.3;">
+                    <button class="Lobby_button" onclick="set_form('join',this)">Join lobby</button>
+                    <button class="Lobby_button" onclick="set_form('create',this)">Create Lobby</button>
+                </div>     
+            </div>  
+        </div>
+    </div>
+    <script>
+        form = document.querySelector('form',clickedButton);
+        form.style.display = 'none';
+
+        function set_form(option){
+            if(option === 'join') 
+                form.action = '/join_lobby';
+            else if(option === 'create')
+                form.action = '/create_lobby';
+
+            form.style.display = 'block';
+
+            const buttons = document.querySelectorAll('button');
+
+            buttons.forEach(button => {
+                button.style.transform = 'scale(0.85)';
+                button.classList.remove('chosen_button');
+            });
+            clickedButton.classList.add('chosen_button');
+        }
+
+        form.addEventListener('submit',(event) => {
+            const response = await fetch('/join_lobby')
+        })
+    </script>
+</body>
+</html>
+
+

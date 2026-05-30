@@ -8,62 +8,129 @@ const { Server } = require("socket.io");
 const server = http.createServer(app);
 const io = new Server(server);
 
+const rounds = ["Pre-flop", "Flop", "Turn", "River"];
+const tables = new Map();
+
+// Setup bazy danych
+const setup = require("./db_setup");
+
+async function startServer() {
+    try {
+        await setup();
+
+        db.connect(err => {
+            if (err) throw err;
+            console.log("Połączono z bazą");
+
+            server.listen(PORT, '0.0.0.0', () => {
+                console.log(`Działa na porcie http://localhost:${PORT}`);
+            });
+        });
+    }
+    catch (error) {
+        console.error("Nie udało się przygotować bazy danych:", error);
+        process.exit(1);
+    }
+}
+startServer();
+
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+//setup socketów:
+const sessionMiddleware = session({
+    secret: "8d1e7f2c9a4b6duf8weyfay2r63n9t2tvr6q",
+    resave: false,
+    saveUninitialized: true,
+});
+
+app.use(sessionMiddleware);
+io.engine.use(sessionMiddleware);
+
+// Socket
 io.on("connection", (socket) => {
     console.log("User connected:", socket.id);
 
     socket.on("disconnect", () => {
         console.log("User disconnected:", socket.id);
     });
+
+    socket.on('join_table', () =>{
+        const id = socket.request.session.tableID;
+
+        if(id){
+            socket.join(id);
+            console.log(`${socket.request.session.username} joined ${socket.request.session.tableID}`)
+        }
+    })
+
+    socket.on('I_won', () => {
+        const table = tables.get(socket.request.session.tableID);
+        const player = table.players.get(socket.request.session.username);
+
+        player.money += table.pot;
+        table.pot = 0;
+        table.highest_bet = 0;
+        table.round = 0;
+
+        for(const pl of table.players.values()){
+            pl.bet = 0;
+            pl.MadeMove = false;
+            pl.folded = false;
+        }       
+
+        io.to(socket.request.session.tableID).emit('winner', {
+            winner: socket.request.session.username,
+        });
+    })
+
+    socket.on('fold', () => {
+        const table = tables.get(socket.request.session.tableID);
+        const player = table.players.get(socket.request.session.username);
+
+        player.folded = true;
+    })
 });
 
-function update(){
-    io.emit("update", {
-        highest_bet: highest_bet,
-        pot: pula,
-        round: rounds[round],
-        showdownReady: showdownReady,
-    });
+function update(tableId,next_round_ready){
+    const table = tables.get(tableId);
+
+    if(next_round_ready){
+        for(const player of table.players.values()){
+            player.bet = 0;
+        }
+    }
+    if(table.round == 4){
+        for(const player of table.players.values()){
+            player.folded = false;
+        }
+        io.to(tableId).emit("next hand");
+    }
+    else{
+        io.to(tableId).emit("update", {
+            next_round_ready: next_round_ready,
+            highest_bet: table.highest_bet,
+            pot: table.pot, 
+            round: table.round,
+        })
+    }
 }
-
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-app.use(session({
-    secret: "8d1e7f2c9a4b6duf8weyfay2r63n9t2tvr6q",
-    resave: false,
-    saveUninitialized: true,
-}));
-
-let highest_bet = 0;
-let pula = 0;
-let rounds = ["Pre-flop", "Flop", "Turn", "River"];
-let round = 0;
-let showdownReady = false;
-
 
 function sprawdz_money(req) {
     if (req.session.money === undefined) {
         req.session.money = 1000;
     }
+    update_money(req);
 }
 function sprawdz_player_bet(req) {
-    if (req.session.player_bet === undefined) {
-        req.session.player_bet = 0;
+    if (req.session.bet === undefined) {
+        req.session.bet = 0;
     }
 }
 
-
-
-function nextRound(){
-    pula = 0;
-    highest_bet = 0;
-    round += 1;
-    showdownReady = false;
-}
-
-
 // BAZA DANYCH
 const mysql = require("mysql2");
+const { table } = require("console");
 
 const db = mysql.createConnection({
     host: "localhost",
@@ -72,15 +139,10 @@ const db = mysql.createConnection({
     database: "Poker"
 });
 
-db.connect(err => {
-    if (err) throw err;
-    console.log("Połączono z bazą");
-});
-
-function update_money(money,username){
+function update_money(req){
     db.query(
         "UPDATE `uzytkownicy` SET money = ? WHERE username = ?",
-        [money, username],
+        [req.session.money, req.session.username],
         (error, result) => {
             if (error) {
                 console.error("update_money ERROR: ", error);
@@ -88,19 +150,20 @@ function update_money(money,username){
             }
 
             if (result.affectedRows === 0) {
-                console.warn(`Nie znaleziono użytkownika: ${username}`);
+                console.warn(`Nie znaleziono użytkownika: ${req.session.username}`);
                 return;
             }
 
-            console.log(`${username}: ${money}`);
+            console.log(`${req.session.username}: ${req.session.money}`);
         }
     );
 }
-function check_money(username) {
+
+function check_money(req) {
     return new Promise((resolve, reject) => {
         db.query(
             "SELECT money FROM `uzytkownicy` WHERE username = ?",
-            [username],
+            [req.session.username],
             (error, result) => {
                 if (error) {
                     console.error("check_money ERROR: ", error);
@@ -116,16 +179,65 @@ function check_money(username) {
         );
     });
 }
+// tables
+app.post('/create_table', (req,res) => {
+    if(!tables.has(req.body.id)){
+        tables.set(req.body.id, {
+            pot: 0,
+            highest_bet: 0,
+            players: new Map(),
+            round: 0
+        });
+        
+        req.session.tableID = req.body.id;
+        tables.get(req.body.id).players.set(req.session.username, {
+            username: req.session.username,
+            money: 1000,
+            bet: 0,
+            MadeMove: false,
+            folded: false
+        });
 
+        res.redirect('/main');
+    }
+    else return res.status(403).json({
+        error: 'The table with that ID already exists'
+    });
+});
+
+app.post('/join_table', (req,res) => {
+    if(tables.has(req.body.id)){
+
+        req.session.tableID = req.body.id;
+        tables.get(req.body.id).players.set(req.session.username, {
+            username: req.session.username,
+            money: 1000,
+            bet: 0,
+            MadeMove: false,
+            folded: false
+        });
+
+        res.redirect('/main');
+    }
+    else return res.status(403).json({
+        error: "Table not found. Make sure you typed the ID correctly"
+    });
+});
+
+app.get('/leave_table', (req,res) => {
+    req.session.tableID = undefined;
+
+    res.redirect('/')
+});
 
 app.post('/register', (req,res) => {
     db.query(
-        "INSERT INTO `uzytkownicy` (username, password, money) VALUES (?, ?, ?)",
-        [req.body.username, req.body.password, 1000],
+        "INSERT INTO `uzytkownicy` (username, password) VALUES (?, ?)",
+        [req.body.username, req.body.password],
         (error, result) => {
             if (error) throw error;
 
-            console.log(`insert: ${req.body.username} ${req.body.password}`)
+            console.log(`insert: ${req.body.username} ${req.body.password}`);
             console.log(result.insertId);
 
             req.session.username = req.body.username;
@@ -152,206 +264,185 @@ app.post('/login', (req,res) => {
                     error: "Nieprawidłowy login lub hasło"
                 });
             }
-            console.log(`User ${req.body.username} has logged :)`);
+            console.log(`User ${req.body.username} has logged`);
 
             req.session.username = result[0].username;
             req.session.logged = true;
 
             res.redirect('/');
-
-            console.log("BODY:", req.body);
-            console.log("USERNAME:", `${req.body.username}`);
-            console.log("PASSWORD:", `${req.body.password}`);
         }
     );
-})
-
-
-
-
-app.get('/register', (req,res) => {
-    res.sendFile(path.join(__dirname, 'rejestracja.html'));
 })
 
 app.get('/login', (req,res) => {
     res.sendFile(path.join(__dirname, 'logowanie.html'));
 })
 
-
-
+app.get('/table', (req,res) => {
+    res.sendFile(path.join(__dirname,'table.html'));
+})
 
 app.get('/', (req,res) => {
     if(req.session.logged === undefined){
         res.redirect('/login');
     }
-    else{
-        update();
-        res.sendFile(path.join(__dirname, 'index.html'));
-        
+    else if(req.session.tableID !== undefined){
+        res.redirect('/main');
     }
-
-    if (req.session.permission === undefined){
-        req.session.permission = false;
+    else{
+        res.sendFile(path.join(__dirname, 'index.html'));
     }
 })
 
+// uzytkownik dolacza do gry
+app.get('/main', (req,res) => {
+    if(req.session.logged === undefined)
+        res.redirect('/login');
+    
+    else if(req.session.tableID === undefined)
+        res.redirect('/table')
 
+    else
+        res.sendFile(path.join(__dirname, 'main.html'))
+})
 
-app.post('/add', (req,res) => {
-    if(req.session.folded === false || req.session.folded === undefined){
-        
-        sprawdz_money(req);
-        sprawdz_player_bet(req);
+// check,raise,call,fold
+app.post('/move', (req,res) => {
+    const table = tables.get(req.session.tableID);
+    const player = table.players.get(req.session.username);
+    
+    if(player.folded){
+        return res.status(400).json({
+            error: "Your hand is folded"
+        });
+    }
 
-        const bet = Number(req.body.bet);
+    // sprawdz_money(req);
+    // sprawdz_player_bet(req);
 
-        let action = '';
-        if (req.body.action == "check") {
-            if(req.session.player_bet === highest_bet){
-                action = 'check';
-            }
+    const bet = Number(req.body.bet);
+
+    if (req.body.action == "raise"){
+        if (bet < table.highest_bet * 2) {
+            return res.status(400).json({
+                error: `The minimal bet is ${table.highest_bet * 2}`
+            });
         }
 
-        else if (req.body.action == "raise") {
-            if (bet <= 0 || bet < (highest_bet * 2)) {
-                return res.status(400).json({
-                    error: `Minimalny bet to ${highest_bet * 2}`
-                });
-            }
-
-            if (bet > req.session.money) {
-                return res.status(400).json({
-                    error: "Nie masz tylu pieniędzy"
-                });
-            }
-            action = 'raise';
-            req.session.money -= bet;
-            req.session.player_bet = bet;
-            pula += bet;
-
-            if(bet > highest_bet){
-                highest_bet = bet;
-            }
+        if (bet > player.money) {
+            return res.status(400).json({
+                error: "Not enough money"
+            });
         }
+        player.money -= bet;
+        player.bet = bet;
+        table.pot += bet;
 
-        else if (req.body.action == "call") {
-            if(req.session.money >= highest_bet - req.session.player_bet){
-                if(req.session.money !== highest_bet){
-                    action = 'call';
-                    req.session.MadeMove = true;
-                    
-                    req.session.money -= highest_bet - req.session.player_bet;
-                    pula += highest_bet - req.session.player_bet;
-                    req.session.player_bet = highest_bet;
-                    
-                    update_money(req.session.money, req.session.username);
-                }
-                else{
-                    return res.status(403).json({
-                        error: 'Nie mozesz dodac 0'
-                    });
-                }
+        if(bet > table.highest_bet){
+            table.highest_bet = bet;
+        }
+    }
+    if (req.body.action == "check"){
+        if(table.highest_bet > player.bet)
+            return res.status(400).json({
+                error: "Can't check while there's a bet"
+            });
+    }
+    else if (req.body.action == "call"){
+        // jak nie będzie miał kasy to wtedy va banque i side pula to po prostu moze zapisać obecną pulę
+        if(player.money >= table.highest_bet - player.bet){
+            if(player.money !== table.highest_bet){
+                
+                player.money -= table.highest_bet - player.bet;
+                table.pot += table.highest_bet - player.bet;
+                player.bet = table.highest_bet;
+                
+                // update_money(req)
             }
             else{
                 return res.status(403).json({
-                    error: 'Masz za mało pieniędzy'
-                })
+                    error: 'Nie mozesz dodac 0'
+                });
             }
         }
-
-        else if (req.body.action == "fold") {
-            action = 'fold';
-            req.session.player_bet = 0;
-            req.session.folded = true;
-            req.session.MadeMove = false;
-        }
-
-        update();
-        update_money(req.session.money, req.session.username)
-
-        return res.json({
-                action: action,
-                player_bet: req.session.player_bet,
-                money: req.session.money,
+        else{
+            return res.status(403).json({
+                error: 'Masz za mało pieniędzy'
             });
+        }
     }
-    else{
-        return res.status(400).json({
-            error: "Nie mozesz wykonac ruchu"
+
+    else if (req.body.action == "fold"){
+        action = 'fold';
+        player.bet = 0;
+        player.folded = true;
+        
+        return res.json({
+            action: req.body.action,
+            player_bet: player.bet,
+            money: player.money
         });
     }
-});
+    player.MadeMove = true
 
-
-
-app.get('/perm', (req,res) => {
-    req.session.permission = true;
-    console.log("Granted permission to " + req.sessionID)
-    console.log(req.session.permission)
-    res.redirect('/')
-})
-
-
-
-
-app.post('/zmien_runde', (req,res) => {
-    if (req.session.permission !== true) {
-        return res.status(403).json({
-            error: 'Brak uprawnień'
-        });
+    // sprawdza czy mozna przejsc do nastepnej rundy
+    const avg_bet = player.bet;
+    let next_round_ready = false;
+    for(const pl of table.players.values()){
+        if(pl.folded) continue;
+        if(!pl.MadeMove){
+            next_round_ready = false;
+            break;
+        } 
+        if(pl.bet == avg_bet) next_round_ready = true;
+        else {
+            next_round_ready = false;
+            break;
+        }
+    }
+    if(next_round_ready){
+        table.highest_bet = 0;
+        table.round += 1;
+        for(const player of table.players.values()){
+            player.bet = 0;
+            player.MadeMove = false
+        }
     }
 
-    highest_bet = 0;
-    showdownReady = false;
-
-    round += 1;
-
-    if (round >= rounds.length) {
-        round = rounds.length - 1;
-        showdownReady = true;
-    }
+    update(req.session.tableID, next_round_ready);
 
     return res.json({
-        round: rounds[round],
-        showdownReady: showdownReady
-    });
-})
-
-
-
-
-app.post('/win', (req,res) => {
-    req.session.money += pula;
-    db.query(
-        "UPDATE uzytkownicy SET money = ? WHERE username = ?;",
-        [req.session.money, req.session.username],
-        (error, result) => {
-            if (error) throw error;
-
-            console.log(`User ${req.session.username} has won`);
-
-            res.send(`<p>${req.session.username} has won!`);
-        }
-    );
+            action: req.body.action,
+            player_bet: player.bet,
+            money: player.money
+        });
 });
 
 
 
 app.get('/state', async (req, res) => {
-    if (req.session.money === undefined) req.session.money = 1000;
-    if (req.session.player_bet === undefined) req.session.player_bet = 0;
-    if (req.session.permission === undefined) req.session.permission = false;
+    const table = tables.get(req.session.tableID);
+
+    if (!table) {
+        return res.status(404).json({ error: 'Table not found' });
+    }
+
+    const player = table.players.get(req.session.username);
+
+    if (!player) {
+        return res.status(404).json({ error: 'Player not found at this table' });
+    }
 
     try{
-        req.session.money = await check_money(req.session.username);
+        req.session.money = await check_money(req);
 
         res.json({
-            money: req.session.money,
-            player_bet: req.session.player_bet,
-            highest_bet: highest_bet,
-            pot: pula,
-            round: rounds[round],
-            showdownReady: showdownReady
+            tableID: req.session.tableID,
+            money: player.money,
+            player_bet: player.bet,
+            highest_bet: table.highest_bet,
+            pot: table.pot,
+            round: table.round
         });
     }
     catch (error) {
@@ -359,14 +450,4 @@ app.get('/state', async (req, res) => {
     }
 });
 
-
-
-app.get('/money', (req, res) => {
-    req.session.money += 1000;
-
-    update_money(req.session.money, req.session.username)
-});
-
-server.listen(PORT, '0.0.0.0', () => {
-    console.log(`Działa na porcie http://localhost:${PORT}`);
-});
+// Review robią: Szymon i Piotrek.

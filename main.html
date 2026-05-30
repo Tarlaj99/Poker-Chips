@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Pula</title>
+    <style>
+        .card h1{
+            text-shadow: 0px 0px 10px white;
+            display: block;
+            color: white;
+            margin: 0 0 20px 0;
+        }
+        
+        span, strong{
+            font-weight: bold;
+        }
+        body {
+            color: white;
+            font-family: Arial, sans-serif;
+            display: flex;
+            max-width: 600px;
+            flex-direction: column;
+            align-items: center;
+            margin: 40px auto;
+            padding: 20px;
+            background-color: black;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        input, button {
+            padding: 10px;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+        input{
+            border: none;
+            color: rgb(255, 0, 204);
+            text-shadow: 0 0 5px red;
+            height: 30px;
+            font-size: 25px;
+            background-color: black;
+        }
+        input:focus{
+            outline: none;
+        }
+
+        .box {
+            margin: 0;
+            border: 1px solid #ccc;
+            padding: 20px;
+            border-radius: 10px;
+        }
+        /* .card, #box{
+            filter: blur(0.2em);
+            transition: filter 0.5s;
+        } */
+        .card{
+            margin: 2%;
+            padding: 2em;
+            width: 50%;
+            height: 100%;
+            background-color: #1c1f2b;
+            text-align: center;
+            border-radius: 10px;
+            position: relative;
+        }
+
+        @property --angle{
+            syntax: "<angle>";
+            initial-value: 0deg;
+            inherits: false;
+        }
+        .card::after, .card::before{
+            z-index: -999;
+            content: '';
+            position: absolute;
+            height: 100%;
+            width: 100%;
+            /* background-image: conic-gradient(from var(--angle),yellow, red, rgb(217, 10, 189), rgb(124, 0, 219), blue, cyan, rgb(10, 209, 10), yellow); */
+            /* background-image: conic-gradient(from var(--angle), transparent 60%, rgb(255, 0, 234)); */
+            background-image: conic-gradient(from var(--angle), rgb(244, 24, 123),rgb(224, 35, 252),rgb(107, 17, 171), rgb(244, 24, 123));
+            /* background-image: conic-gradient(from var(--angle), rgb(170, 52, 255), rgb(246, 139, 238) 20%, rgb(170, 52, 255)); */
+            animation: 2s spin linear infinite;
+            top: 50%; left: 50%;
+            translate: -50% -50%;
+            /* zeby nie miec tla w  boxie */
+            padding: 3px;
+            border-radius: 10px;
+        }
+        @keyframes spin{
+            from{
+                --angle: 0deg;
+            }
+            to{
+                --angle: 360deg;
+            }
+        }
+
+        .card::before{
+            filter: blur(1.5rem);
+        }
+        #money{
+            text-shadow: 0px 0px 10px rgb(255, 255, 255);
+            font-size: 35px;
+        }
+        #pot{
+            text-shadow: 0 0 15px rgb(255, 0, 0);
+            font-size: 40px;
+        }
+        #highest_bet{
+            text-shadow: 0 0 10px rgb(140, 0, 255);
+            font-size: 35px;
+        }
+        #player_bet{
+            text-shadow: 0 0 10px rgb(49, 156, 232);
+            font-size: 35px;
+        }
+        #join_Table_container{
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 999;
+
+            width: 300px;
+            height: 100px;
+        }
+        #join_Table{
+            width: 100%;
+            height: 100%;
+
+            margin: 0;
+            transition: transform 0.2s ease;
+
+            color: black;
+            font-size: 40px;
+            text-shadow: 0 0 5px rgb(255, 6, 226);
+        }
+        #join_Table:hover{
+            transform: scale(1.07);
+        }
+
+        /* #join_Table{
+            transition: top 0.5s ease-in;
+            position: fixed;
+            z-index: 999;
+        } */
+        #fold{
+            background-color: rgb(200, 1, 1); 
+            color: white;
+            text-shadow: 0 0 8px black;
+            margin-top: 35px;
+            border: 2px solid rgb(145, 3, 3);
+        }
+        form > button:active{
+            transform: scale(0.95);
+        }
+        #permission{
+            display: none; 
+            margin-top: 100px;
+        }
+        .buttons_container{
+            height: 125px;
+        }
+        .buttons_container button{
+            font-family: serif;
+            text-shadow: 0 0 15px white;
+            background-color: rgb(68, 68, 68);
+
+            color: white;
+            border: 2px solid black;
+            border-radius: 8px;
+            width: 70px;
+            text-align: center;
+            
+        }
+        button[name='action']{
+            transition: 0.2s transform;
+        }
+
+        button[name='action']:hover{
+            scale: 1.05;
+        }
+        .tableInfo{
+            position: absolute;
+            top: 2%;
+            right: 2%;
+            display: flex;
+
+            margin: 0;
+            padding: 0;
+        }
+        .tableInfo #tableID{
+            text-shadow: 0px 0px 10px white;
+        }
+        #leave{
+            position: absolute;
+            top: 2%;
+            left: 2%;
+
+            border: none;
+            background-color: rgb(164, 164, 164);
+            box-shadow: 0 0 10px white;
+            color: black;
+        }
+        #winner{
+            position: fixed;
+            display: none;
+            inset: 0;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            background-color: rgba(0, 0, 0, 0.75);
+        }
+
+        #winner_button{
+            display: block;
+            padding: 25px 50px;
+            font-size: 35px;
+            border: block;
+            border-radius: 12px;
+            color: black;
+            background-color: white;
+            box-shadow: 0 0 30px white;
+            cursor: pointer;
+        }
+        #winner_announcement{
+            display: none;
+        }
+        .range_container{
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .range_container button{
+            background: none;
+            border: none;
+            font-size: 24px;
+           
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            margin: 5px 10px 0 10px;
+            color: white;
+            text-shadow: 0 0 5px white;
+        }
+    </style>
+</head>
+<body>
+    <div id="winner">
+        <h1 id="winner_announcement"></h1>
+        <button id="winner_button" type="submit" onclick="take_pot()"><b>Take pot</b></button>
+    </div>
+    <a href="/leave_table">
+        <button id="leave" onclick="leave_table()">Leave table</button>
+    </a>
+    
+    <div class="tableInfo">
+        <h2 id="tableID"></h2>
+    </div>
+    <div class="card" id="card">
+        <div class="box" id="box">
+            <h1 id="round">Pre-flop</h1> 
+            <p>
+                <strong>Money:</strong><br>
+                <span id="money">$1000</span>
+            </p>
+            <p>
+                <strong>Pot:</strong><br>
+                <span id="pot">$0</span>
+            </p>
+
+            <p>
+                <strong>Highest bet:</strong><br>
+                <span id="highest_bet">$0</span>
+            </p>
+            <p>
+                <strong>Your bet:</strong><br>
+                <span id="player_bet">$0</span>
+            </p>
+            <form action="" method="post">
+                <div class="range_container">
+                    <button onclick="substract_input_value()" type="button">-</button>
+                    <input type="range" min="2" step="2" name="bet" id="bet_input">
+                    <button onclick="add_input_value()" type="button">+</button>
+                </div>
+                
+                <h1 id="bet_value" style="font-size: 30px; text-shadow: 0 0 15px white;"></h1>
+                <br>
+                <div class="buttons_container">
+                     <div>
+                        <button type="submit" name="action" class="action" value="check">Check</button>
+                        <button type="submit" name="action" class="action" value="raise">Raise</button>
+                        <button type="submit" name="action" class="action" value="call">Call</button>    
+                    </div>
+                    <button type="submit" onclick="fold()" name="action" class="action" value="fold" id="fold">FOLD</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <ol>
+        
+    </ol>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        const rounds = ['Pre-flop','Flop','Turn','River'];
+
+        const form = document.querySelector('form');
+        const tableID = document.getElementById('tableID');
+        const round = document.getElementById('round');
+
+        const money = document.getElementById('money');
+        const pot = document.getElementById('pot');
+        const highest_bet = document.getElementById('highest_bet');
+        const player_bet = document.getElementById('player_bet');
+
+        const bet_value = document.getElementById('bet_value');
+        const bet_input = document.getElementById('bet_input');
+        
+        const winner = document.getElementById('winner');
+        const winner_announcement = document.getElementById('winner_announcement');
+        const winner_button = document.getElementById('winner_button');
+
+        bet_input.addEventListener('input', () => {
+            bet_value.textContent = (bet_input.value != bet_input.max) ? "$" + bet_input.value : "All in";
+        });
+        /* tylko przy pierwszym razie */
+        async function wczytaj(){
+            const info_response = await fetch('/state');
+            const info = await info_response.json();
+
+            tableID.textContent = "ID: " + info.tableID;
+            money.textContent = "$" + info.money;
+            pot.textContent = "$" + info.pot;
+            highest_bet.textContent = "$" + info.highest_bet;
+            player_bet.textContent = "$" + info.player_bet;
+            round.textContent = rounds[info.round];
+            
+            bet_input.min = Math.max(2, Number(info.highest_bet) * 2);
+            bet_input.max = Number(info.money);
+
+            socket.emit('join_table');
+        }
+        wczytaj();
+
+        /* sockety */
+        socket.on("update", (dane) => { 
+            if(dane.next_round_ready){
+                player_bet.textContent = "$0";
+            }
+            round.textContent = rounds[dane.round];
+            highest_bet.textContent = "$" + dane.highest_bet;
+            pot.textContent = "$" + dane.pot;
+
+            if(Math.max(2, Number(dane.highest_bet) * 2) > Number(money.textContent))
+                bet_value.textContent = 'Va Banque';
+
+            bet_input.min = Math.max(2, Number(dane.highest_bet) * 2);
+            bet_value.textContent = '';
+        })
+
+        socket.on("next hand", () => {
+            winner.style.display = 'flex';
+            winner_button.style.display = 'flex';
+            winner_announcement.style.display = 'none';
+        })
+
+        /* move */
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault(); /* zamiast klasycznego wysłania forma to zrobie to za pomoca fetch()*/ 
+            const button = event.submitter;
+
+            if(button.value === "raise" && bet_value.textContent === ''){
+                bet_input.value = Number(highest_bet.textContent.replace('$','')) * 2;
+            }
+            
+            const data = new URLSearchParams(new FormData(form, button)); /* bierze <form> i <button> z tamtego forma glownego */
+        
+            /* zamiast formularza */
+            const response = await fetch('/move', {
+                method: 'POST',
+                body: data,
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'}
+            });
+            const result = await response.json();
+            
+            if (!response.ok) {
+                bet_value.textContent = result.error;
+                return;
+            }
+            money.textContent = "$" + result.money;
+            player_bet.textContent = "$" + result.player_bet;
+        });
+        
+        /* WINNER */
+        socket.on("winner", (dane) => {
+            winner_button.style.display = 'None';
+            winner_announcement.textContent = dane.winner + " has won!";
+            winner_announcement.style.display = 'block';
+            
+            setTimeout(() => {
+                winner.style.display = 'none';
+                winner_button.style.display = 'none';
+                winner_announcement.style.display = 'none';
+                wczytaj();
+            }, 2000);
+            
+        })
+        function take_pot(){
+            winner.style.display = 'none';
+            socket.emit('I_won');
+            wczytaj();
+        }
+
+        function fold(){
+            document.querySelector('body').style.filter = "brightness(50%)";
+            socket.emit('fold');
+        }
+
+        async function leave_table(){
+            const response = await fetch('/leave_table');
+        }
+
+        function substract_input_value(){
+            bet_input.value = Number(bet_input.value) - 2;
+            bet_value.textContent = (bet_input.value != bet_input.max) ? "$" + bet_input.value : "All in";
+        }
+        function add_input_value(){
+            bet_input.value = Number(bet_input.value) + 2;
+            bet_value.textContent = (bet_input.value != bet_input.max) ? "$" + bet_input.value : "All in";
+        }
+    </script> 
+</body>
+</html>
