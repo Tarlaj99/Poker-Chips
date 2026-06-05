@@ -44,8 +44,9 @@ const sessionMiddleware = session({
     saveUninitialized: true,
 });
 
-app.use(sessionMiddleware);
-io.engine.use(sessionMiddleware);
+app.use(sessionMiddleware); 
+io.engine.use(sessionMiddleware); 
+// teraz sockety mają dostęp do sesji
 
 // Socket
 io.on("connection", (socket) => {
@@ -64,8 +65,10 @@ io.on("connection", (socket) => {
         }
     })
 
-    socket.on('I_won', () => {
-        const table = tables.get(socket.request.session.tableID);
+    // to wysyła gościu, który wygra runde
+    socket.on('I_won', () => { 
+        // zeby zaczaic co tu sie dzieje to Ctrl + F i zapraszam na '/create_table'
+        const table = tables.get(socket.request.session.tableID); 
         const player = table.players.get(socket.request.session.username);
 
         player.money += table.pot;
@@ -81,14 +84,7 @@ io.on("connection", (socket) => {
 
         io.to(socket.request.session.tableID).emit('winner', {
             winner: socket.request.session.username,
-        });
-    })
-
-    socket.on('fold', () => {
-        const table = tables.get(socket.request.session.tableID);
-        const player = table.players.get(socket.request.session.username);
-
-        player.folded = true;
+        }); // to wysyła do wszystkich przy tym stole wiadomosc kto wygral runde
     })
 });
 
@@ -189,14 +185,7 @@ app.post('/create_table', (req,res) => {
             round: 0
         });
         
-        req.session.tableID = req.body.id;
-        tables.get(req.body.id).players.set(req.session.username, {
-            username: req.session.username,
-            money: 1000,
-            bet: 0,
-            MadeMove: false,
-            folded: false
-        });
+        join_table(req.session.tableID)
 
         res.redirect('/main');
     }
@@ -209,13 +198,7 @@ app.post('/join_table', (req,res) => {
     if(tables.has(req.body.id)){
 
         req.session.tableID = req.body.id;
-        tables.get(req.body.id).players.set(req.session.username, {
-            username: req.session.username,
-            money: 1000,
-            bet: 0,
-            MadeMove: false,
-            folded: false
-        });
+        join_table(req.session.tableID, req.session.username)
 
         res.redirect('/main');
     }
@@ -223,6 +206,23 @@ app.post('/join_table', (req,res) => {
         error: "Table not found. Make sure you typed the ID correctly"
     });
 });
+
+function join_table(tableID,username){
+
+    const table = tables.get(tableID)
+    const player = table.players.get(username);
+
+    table.players.set(username, {
+        username: username,
+        money: 1000,
+        bet: 0,
+        MadeMove: false,
+        folded: false
+    });
+    
+    if(table.round != 0) 
+       player.folded = true;    // teraz jak ktoś dołączy w trakcie rundy to będzie czekać na następną, a nie, ze karty na stole, a ten nagle sie pojawia i kladzie bet 
+}
 
 app.get('/leave_table', (req,res) => {
     req.session.tableID = undefined;

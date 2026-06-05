@@ -333,8 +333,8 @@
         bet_input.addEventListener('input', () => {
             bet_value.textContent = (bet_input.value != bet_input.max) ? "$" + bet_input.value : "All in";
         });
-        /* tylko przy pierwszym razie */
-        async function wczytaj(){
+        /* wczytuje cały stan stołu. Przydatne jak się dołącza*/
+        async function state(){
             const info_response = await fetch('/state');
             const info = await info_response.json();
 
@@ -350,7 +350,7 @@
 
             socket.emit('join_table');
         }
-        wczytaj();
+        state();
 
         /* sockety */
         socket.on("update", (dane) => { 
@@ -383,7 +383,7 @@
                 bet_input.value = Number(highest_bet.textContent.replace('$','')) * 2;
             }
             
-            const data = new URLSearchParams(new FormData(form, button)); /* bierze <form> i <button> z tamtego forma glownego */
+            const data = new URLSearchParams(new FormData(form, button)); /* bierze dane z <form> i <button> */
         
             /* zamiast formularza */
             const response = await fetch('/move', {
@@ -407,23 +407,22 @@
             winner_announcement.textContent = dane.winner + " has won!";
             winner_announcement.style.display = 'block';
             
-            setTimeout(() => {
+            setTimeout(() => { /* Pokazuje kto wygrał, a potem rozpoczyna rundę od nowa*/
                 winner.style.display = 'none';
                 winner_button.style.display = 'none';
                 winner_announcement.style.display = 'none';
-                wczytaj();
+                state();
             }, 2000);
             
         })
         function take_pot(){
             winner.style.display = 'none';
             socket.emit('I_won');
-            wczytaj();
+            state();
         }
 
         function fold(){
             document.querySelector('body').style.filter = "brightness(50%)";
-            socket.emit('fold');
         }
 
         async function leave_table(){
