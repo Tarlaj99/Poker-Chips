@@ -5,7 +5,7 @@ Welcome to Poker Chips, a web application designed to replace physical poker chi
 The purpose of this application is to replace physical poker chips during live poker games.
 
 # SETUP
-Before starting the server, run the following commands.:
+Before starting the server, run the following commands:
 
 npm install
 node db_setup.js
