@@ -121,36 +121,6 @@
             text-shadow: 0 0 10px rgb(49, 156, 232);
             font-size: 35px;
         }
-        #join_Table_container{
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            z-index: 999;
-
-            width: 300px;
-            height: 100px;
-        }
-        #join_Table{
-            width: 100%;
-            height: 100%;
-
-            margin: 0;
-            transition: transform 0.2s ease;
-
-            color: black;
-            font-size: 40px;
-            text-shadow: 0 0 5px rgb(255, 6, 226);
-        }
-        #join_Table:hover{
-            transform: scale(1.07);
-        }
-
-        /* #join_Table{
-            transition: top 0.5s ease-in;
-            position: fixed;
-            z-index: 999;
-        } */
         #fold{
             background-color: rgb(200, 1, 1); 
             color: white;
@@ -204,8 +174,9 @@
             top: 2%;
             left: 2%;
 
-            border: none;
-            background-color: rgb(164, 164, 164);
+            border: 2px solid white;
+            background-color: rgb(167, 167, 167);
+            color: white;
             box-shadow: 0 0 10px white;
             color: black;
         }
@@ -251,6 +222,12 @@
             color: white;
             text-shadow: 0 0 5px white;
         }
+        #bet_value{
+            font-size: 30px; 
+            text-shadow: 0 0 15px white;
+            min-height: 30px;
+            max-height: 30px;
+        }
     </style>
 </head>
 <body>
@@ -258,9 +235,8 @@
         <h1 id="winner_announcement"></h1>
         <button id="winner_button" type="submit" onclick="take_pot()"><b>Take pot</b></button>
     </div>
-    <a href="/leave_table">
-        <button id="leave" onclick="leave_table()">Leave table</button>
-    </a>
+    
+    <button id="leave" onclick="leave_table()">Leave table</button>
     
     <div class="tableInfo">
         <h2 id="tableID"></h2>
@@ -277,6 +253,7 @@
                 <span id="pot">$0</span>
             </p>
 
+
             <p>
                 <strong>Highest bet:</strong><br>
                 <span id="highest_bet">$0</span>
@@ -292,7 +269,8 @@
                     <button onclick="add_input_value()" type="button">+</button>
                 </div>
                 
-                <h1 id="bet_value" style="font-size: 30px; text-shadow: 0 0 15px white;"></h1>
+                <h1 id="bet_value"></h1>
+
                 <br>
                 <div class="buttons_container">
                      <div>
@@ -300,7 +278,7 @@
                         <button type="submit" name="action" class="action" value="raise">Raise</button>
                         <button type="submit" name="action" class="action" value="call">Call</button>    
                     </div>
-                    <button type="submit" onclick="fold()" name="action" class="action" value="fold" id="fold">FOLD</button>
+                    <button type="submit" name="action" class="action" value="fold" id="fold">FOLD</button>
                 </div>
             </form>
         </div>
@@ -312,6 +290,7 @@
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io();
+
         const rounds = ['Pre-flop','Flop','Turn','River'];
 
         const form = document.querySelector('form');
@@ -325,118 +304,229 @@
 
         const bet_value = document.getElementById('bet_value');
         const bet_input = document.getElementById('bet_input');
-        
+
         const winner = document.getElementById('winner');
         const winner_announcement = document.getElementById('winner_announcement');
         const winner_button = document.getElementById('winner_button');
 
-        bet_input.addEventListener('input', () => {
-            bet_value.textContent = (bet_input.value != bet_input.max) ? "$" + bet_input.value : "All in";
+        let myMoney = 0;
+
+        socket.on('connect', () => {
+            socket.emit('join_table');
         });
-        /* wczytuje cały stan stołu. Przydatne jak się dołącza*/
+
+        bet_input.addEventListener('input', () => {
+            bet_value.textContent = (Number(bet_input.value) !== Number(bet_input.max))
+                ? "$" + bet_input.value
+                : "All in";
+        });
+
+        function render_sidepots(sidepotsData){
+            if (!Array.isArray(sidepotsData) || sidepotsData.length === 0) {
+                return;
+            }
+
+            pot.textContent = sidepotsData
+                .map(sidepot => `$${sidepot.amount}`)
+                .join(' , ');
+        }
+
+        /* wczytuje cały stan stołu. Przydatne jak się dołącza */
         async function state(){
             const info_response = await fetch('/state');
             const info = await info_response.json();
 
+            if (!info_response.ok) {
+                bet_value.textContent = info.error;
+                return;
+            }
+
+            myMoney = Number(info.money);
+            if(myMoney === 0){
+                bet_value = 'You lost'
+                document.querySelector('body').style.filter = "brightness(50%)";
+            }
             tableID.textContent = "ID: " + info.tableID;
             money.textContent = "$" + info.money;
-            pot.textContent = "$" + info.pot;
+            if (Array.isArray(info.sidepots) && info.sidepots.length > 0)
+                render_sidepots(info.sidepots);
+            else
+                pot.textContent = "$" + info.pot;
+
             highest_bet.textContent = "$" + info.highest_bet;
             player_bet.textContent = "$" + info.player_bet;
-            round.textContent = rounds[info.round];
-            
-            bet_input.min = Math.max(2, Number(info.highest_bet) * 2);
-            bet_input.max = Number(info.money);
+            round.textContent = rounds[info.round] || 'Showdown';
 
-            socket.emit('join_table');
+            document.querySelector('body').style.filter = info.folded ? "brightness(50%)" : "none";
+
+            set_bet_values(info.highest_bet, myMoney);
         }
         state();
 
         /* sockety */
-        socket.on("update", (dane) => { 
-            if(dane.next_round_ready){
+        socket.on("update", (dane) => {
+            if(dane.next_round_ready) {
                 player_bet.textContent = "$0";
             }
-            round.textContent = rounds[dane.round];
+
+            round.textContent = rounds[dane.round] || 'Showdown';
             highest_bet.textContent = "$" + dane.highest_bet;
-            pot.textContent = "$" + dane.pot;
+            if (Array.isArray(dane.sidepots) && dane.sidepots.length > 0)
+                render_sidepots(dane.sidepots);
+            else
+                pot.textContent = "$" + dane.pot;
 
-            if(Math.max(2, Number(dane.highest_bet) * 2) > Number(money.textContent))
-                bet_value.textContent = 'Va Banque';
+            set_bet_values(dane.highest_bet, myMoney);
+        });
 
-            bet_input.min = Math.max(2, Number(dane.highest_bet) * 2);
-            bet_value.textContent = '';
-        })
+        socket.on("next hand", (dane) => {
+            if (dane) {
+                if (Array.isArray(dane.sidepots) && dane.sidepots.length > 0)
+                    render_sidepots(dane.sidepots);
+                else
+                    pot.textContent = "$" + dane.pot;
 
-        socket.on("next hand", () => {
-            winner.style.display = 'flex';
-            winner_button.style.display = 'flex';
-            winner_announcement.style.display = 'none';
-        })
+                highest_bet.textContent = "$" + dane.highest_bet;
+            }
+
+            if(document.querySelector('body').style.filter === 'none'){
+                winner.style.display = 'flex';
+                winner_button.style.display = 'flex';
+                winner_announcement.style.display = 'none';
+            }
+        });
 
         /* move */
         form.addEventListener('submit', async (event) => {
-            event.preventDefault(); /* zamiast klasycznego wysłania forma to zrobie to za pomoca fetch()*/ 
+            event.preventDefault();
+
             const button = event.submitter;
 
             if(button.value === "raise" && bet_value.textContent === ''){
-                bet_input.value = Number(highest_bet.textContent.replace('$','')) * 2;
+                bet_input.value = bet_input.min;
             }
-            
-            const data = new URLSearchParams(new FormData(form, button)); /* bierze dane z <form> i <button> */
-        
-            /* zamiast formularza */
+
+            if (button.value === "raise" && bet_input.disabled) {
+                bet_value.textContent = 'You cannot raise. Call or fold.';
+                return;
+            }
+
+            const data = new URLSearchParams(new FormData(form, button));
+
             const response = await fetch('/move', {
                 method: 'POST',
                 body: data,
                 headers: {'Content-Type': 'application/x-www-form-urlencoded'}
             });
+
             const result = await response.json();
-            
+
             if (!response.ok) {
                 bet_value.textContent = result.error;
                 return;
             }
+
+            myMoney = Number(result.money);
+
+            if(result.action === "fold"){
+                document.querySelector('body').style.filter = "brightness(50%)";
+            }
+
             money.textContent = "$" + result.money;
             player_bet.textContent = "$" + result.player_bet;
+
+            set_bet_values(Number(highest_bet.textContent.replace('$','')), myMoney);
         });
-        
+
         /* WINNER */
         socket.on("winner", (dane) => {
-            winner_button.style.display = 'None';
-            winner_announcement.textContent = dane.winner + " has won!";
+            winner_button.style.display = 'none';
+            winner_announcement.textContent = dane.winner + " has won $" + dane.amount + "!";
             winner_announcement.style.display = 'block';
-            
-            setTimeout(() => { /* Pokazuje kto wygrał, a potem rozpoczyna rundę od nowa*/
+
+            if (Array.isArray(dane.sidepots)) {
+                render_sidepots(dane.sidepots);
+            }
+
+            setTimeout(() => {
                 winner.style.display = 'none';
                 winner_button.style.display = 'none';
                 winner_announcement.style.display = 'none';
+                document.querySelector('body').style.filter = "none";
                 state();
             }, 2000);
-            
-        })
+        });
+
         function take_pot(){
             winner.style.display = 'none';
             socket.emit('I_won');
-            state();
-        }
-
-        function fold(){
-            document.querySelector('body').style.filter = "brightness(50%)";
         }
 
         async function leave_table(){
-            const response = await fetch('/leave_table');
+            await fetch('/leave_table');
+            window.location.href = '/';
         }
 
         function substract_input_value(){
-            bet_input.value = Number(bet_input.value) - 2;
-            bet_value.textContent = (bet_input.value != bet_input.max) ? "$" + bet_input.value : "All in";
+            if (bet_input.disabled) return;
+
+            bet_input.value = Math.max(
+                Number(bet_input.min),
+                Number(bet_input.value) - 2
+            );
+
+            bet_value.textContent = (Number(bet_input.value) !== Number(bet_input.max))
+                ? "$" + bet_input.value
+                : "All in";
         }
+
         function add_input_value(){
-            bet_input.value = Number(bet_input.value) + 2;
-            bet_value.textContent = (bet_input.value != bet_input.max) ? "$" + bet_input.value : "All in";
+            if (bet_input.disabled) return;
+
+            bet_input.value = Math.min(
+                Number(bet_input.max),
+                Number(bet_input.value) + 2
+            );
+
+            bet_value.textContent = (Number(bet_input.value) !== Number(bet_input.max))
+                ? "$" + bet_input.value
+                : "All in";
         }
+
+        function set_bet_values(highestBet, availableMoney){
+            highestBet = Number(highestBet);
+            availableMoney = Number(availableMoney);
+
+            const minRaise = highestBet === 0 ? 2 : highestBet * 2;
+
+            if (availableMoney <= 0) {
+                bet_input.disabled = true;
+                bet_input.min = 0;
+                bet_input.max = 0;
+                bet_input.value = 0;
+                bet_value.textContent = 'All in';
+                return;
+            }
+
+            if (minRaise <= availableMoney) {
+                bet_input.disabled = false;
+                bet_input.min = minRaise;
+                bet_input.max = availableMoney;
+
+                if (Number(bet_input.value) < minRaise || Number(bet_input.value) > availableMoney) {
+                    bet_input.value = minRaise;
+                }
+
+                bet_value.textContent = '';
+                return;
+            }
+            bet_input.disabled = true;
+            bet_input.min = availableMoney;
+            bet_input.max = availableMoney;
+            bet_input.value = availableMoney;
+            bet_value.textContent = ' Call / fold';
+        }
+
     </script> 
 </body>
 </html>
