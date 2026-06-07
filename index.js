@@ -104,6 +104,7 @@ function createTable() {
         pot: 0,
         highest_bet: 0,
         players: new Map(),
+        moves: 0,
         num_players: 0,
         sidepots: [],
         round: 0,
@@ -211,6 +212,7 @@ function getPlayersWhoCanAct(table) {
 }
 
 function isRoundReady(table) {
+    if(table.moves < 2) return false;
     const playersWhoCanAct = getPlayersWhoCanAct(table);
 
     if (playersWhoCanAct.length === 0) {
@@ -242,7 +244,7 @@ function moveToNextRoundOrShowdown(tableID, table) {
     resetCurrentBettingRound(table);
     refreshSidePots(table);
 
-    if (table.round >= rounds.length) {
+    if (table.round >= rounds.length || CheckIfEveryoneAllin(table)) {
         io.to(tableID).emit("next hand", {
             pot: table.pot,
             sidepots: table.sidepots,
@@ -252,7 +254,12 @@ function moveToNextRoundOrShowdown(tableID, table) {
 
     emitTableUpdate(tableID, true);
 }
-
+function CheckIfEveryoneAllin(table){
+    for(const player of table.players.values()){
+        if(!player.allIn) return false;
+    }
+    return true;
+}
 function awardWinner(tableID, table, player, wonByFold = false) {
     refreshSidePots(table);
 
@@ -646,7 +653,7 @@ app.post("/move", (req, res) => {
             error: "Unknown action"
         });
     }
-
+    table.moves += 1;
     refreshSidePots(table);
 
     if (isRoundReady(table)) {

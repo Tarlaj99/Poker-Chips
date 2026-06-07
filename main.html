@@ -356,7 +356,8 @@
             highest_bet.textContent = "$" + info.highest_bet;
             player_bet.textContent = "$" + info.player_bet;
             round.textContent = rounds[info.round] || 'Showdown';
-
+            bet_input.value = bet_input.min;
+            bet_value.textContent = String(bet_input.value);
             document.querySelector('body').style.filter = info.folded ? "brightness(50%)" : "none";
 
             set_bet_values(info.highest_bet, myMoney);
@@ -516,7 +517,6 @@
                 if (Number(bet_input.value) < minRaise || Number(bet_input.value) > availableMoney) {
                     bet_input.value = minRaise;
                 }
-
                 bet_value.textContent = '';
                 return;
             }
