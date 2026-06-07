@@ -131,6 +131,7 @@
         }
         a{
             color: rgb(144, 14, 200);
+            text-decoration: underline;
         }
     </style>
 </head>
@@ -139,8 +140,8 @@
         <div class="box">
             <h1>Sign in</h1>
             <form action="/login" method="post" id="form">
-                <input type="text" name="username" placeholder="Username" required>
-                <input type="password" name="password" placeholder="Password" required>
+                <input type="text" name="username" placeholder="Username" id="Username" required>
+                <input type="password" name="password" placeholder="Password"  id="Password" required>
                 <input type="submit" value="Enter">
                 <h2 id="error"></h2>
                 <div id="register" class="register">
@@ -156,19 +157,25 @@
         const a = document.querySelector('a');
         const p = document.querySelector('p');
         const error = document.getElementById('error');
+        const username = document.getElementById('Username');
+        const password = document.getElementById('Password');
 
         function change(){
             if(a.textContent === 'Sign in'){
+                h1.textContent = 'Sign in';
                 form.action = '/login';
                 p.textContent = "Don't have an account yet?";
                 a.textContent = 'Sign up';
             } 
             else if(a.textContent === 'Sign up'){
+                h1.textContent = 'Sign up';
                 form.action = '/register';
                 p.textContent = "Already have an account?";
                 a.textContent = 'Sign in';
                 
             }
+            username.value = '';
+            password.value = '';
         }
 
         form.addEventListener('submit', async (e) => {
@@ -185,9 +192,12 @@
 
             if (!response.ok) {
                 error.textContent = result.error || 'Login failed';
+                setTimeout(() =>{
+                    error.textContent = '';
+                },1500)
                 return;
             }
-
+            
             window.location.href = result.redirect;
         });
     </script>
