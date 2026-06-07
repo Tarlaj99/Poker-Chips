@@ -212,10 +212,10 @@ function getPlayersWhoCanAct(table) {
 }
 
 function isRoundReady(table) {
-    if(table.moves <= 2) return false;
+    if(table.moves < table.players.size + 2) return false;
     const playersWhoCanAct = getPlayersWhoCanAct(table);
 
-    if (playersWhoCanAct.length === 0) {
+    if (playersWhoCanAct.length === 1) {
         return true;
     }
 
@@ -245,6 +245,7 @@ function moveToNextRoundOrShowdown(tableID, table) {
     refreshSidePots(table);
 
     if (table.round >= rounds.length || CheckIfEveryoneAllin(table)) {
+        table.moves = 0;
         io.to(tableID).emit("next hand", {
             pot: table.pot,
             sidepots: table.sidepots,
