@@ -122,6 +122,12 @@ function recalculatePot(table) {
 
 function calculateSidePots(table) {
     const players = [...table.players.values()];
+
+    // Side pots exist only when at least one player is all in.
+    if (!players.some(player => player.allIn)) {
+        return [];
+    }
+
     const betLevels = [...new Set(
         players
             .map(player => player.totalBet)
