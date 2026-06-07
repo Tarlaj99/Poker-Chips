@@ -357,7 +357,7 @@
             player_bet.textContent = "$" + info.player_bet;
             round.textContent = rounds[info.round] || 'Showdown';
             document.querySelector('body').style.filter = info.folded ? "brightness(50%)" : "none";
-
+            bet_input.value = bet_input.min;
             set_bet_values(info.highest_bet, myMoney);
         }
         state();
@@ -493,9 +493,13 @@
         }
 
         function updateBetValueText(){
-            bet_value.textContent = (Number(bet_input.value) !== Number(bet_input.max))
-                ? "$" + bet_input.value
-                : "All in";
+            if(Number(bet_input.value) !== Number(bet_input.max)){
+                bet_input.value = bet_input.min;
+                bet_value.textContent = "$" + bet_input.value;
+            }
+            else{
+                bet_value.textContent = 'All in';
+            }
         }
 
         function set_bet_values(highestBet, availableMoney){

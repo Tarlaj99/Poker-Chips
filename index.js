@@ -212,7 +212,7 @@ function getPlayersWhoCanAct(table) {
 }
 
 function isRoundReady(table) {
-    if(table.moves < 2) return false;
+    if(table.moves <= 2) return false;
     const playersWhoCanAct = getPlayersWhoCanAct(table);
 
     if (playersWhoCanAct.length === 0) {
