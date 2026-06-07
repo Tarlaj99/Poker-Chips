@@ -443,7 +443,9 @@ app.post("/register", (req, res) => {
             req.session.logged = true;
 
             return req.session.save(() => {
-                res.redirect("/");
+                res.json({
+                    redirect: "/"
+                });
             });
         }
     );
